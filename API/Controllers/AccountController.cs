@@ -26,7 +26,9 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
         {
-            if (await UserExists(registerDto.Username)) return BadRequest("Username is taken");
+            if (string.IsNullOrWhiteSpace(registerDto.Username) || registerDto.Username.IndexOf(" ") != -1) return BadRequest("Username is not empty, not consists white-space");
+            if (string.IsNullOrWhiteSpace(registerDto.Password) || registerDto.Password.IndexOf(" ") != -1) return BadRequest("Password is not empty, not consists white-space");
+            if(await UserExists(registerDto.Username)) return BadRequest("Username is taken");
             using var hmac = new HMACSHA512();
             var user = new AppUser{
                 UserName = registerDto.Username.ToLower(),
