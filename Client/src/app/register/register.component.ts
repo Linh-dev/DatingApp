@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { AbstractControl, FormBuilder, FormControl, FormGroup, ValidatorFn, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { AccountService } from '../_services/account.service';
 
@@ -10,26 +11,46 @@ import { AccountService } from '../_services/account.service';
 export class RegisterComponent implements OnInit {
   @Output() cancelRegister = new EventEmitter();
   model: any = {};
-  constructor(private accoutService: AccountService, private toastr: ToastrService) { }
+  registerForm: FormGroup;
+  maxDate: Date;
+
+  constructor(private accoutService: AccountService, private toastr: ToastrService, private fb: FormBuilder) { }
 
   ngOnInit(): void {
+    this.initializeForm();
+    this.maxDate = new Date();
+    this.maxDate.setFullYear(this.maxDate.getFullYear() - 18);
+  }
+
+  matchValues(matchTo: string): ValidatorFn{
+    return (control: AbstractControl) =>{
+      return control?.value === control?.parent?.controls[matchTo].value
+      ? null : {isMatching: true} 
+    }
+  }
+
+  initializeForm(){
+    this.registerForm = this.fb.group({
+      username:['', Validators.required],
+      password:['', [Validators.required, Validators.minLength(4)]],
+      confirmPassword:['', [Validators.required, this.matchValues('password')]],
+      gender:[''],
+      knownAs:['', Validators.required],
+      dateOfBirth:['', Validators.required],
+      city:['', Validators.required],
+      country:['', Validators.required],
+    });
   }
 
   register(){
-    this.accoutService.register(this.model).subscribe(res =>{
+    this.accoutService.register(this.registerForm.value).subscribe(res =>{
       console.log(res);
       this.cancel();
     }, error =>{
-      if(this.model.username === '' || this.model.username.indexOf(' ') != -1){
-        this.toastr.warning("Username is required and not consists white-space");
-      }else if(this.model.password === '' || this.model.password.indexOf(' ') != -1){
-        this.toastr.warning("Password is required and not consists white-space");
-      }else{
         console.log(error);
-        this.toastr.error(error.error);
-      }
+        // this.toastr.error(error);
     })
-
+    console.log(this.registerForm.value);
   }
   cancel(){
     this.cancelRegister.emit(false);
