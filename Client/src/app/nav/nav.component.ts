@@ -20,7 +20,7 @@ export class NavComponent implements OnInit {
   user: User;
 
   constructor(public accountService : AccountService, private router: Router,
-    private toastr: ToastrService, private memberService: MembersService) {
+    private toastr: ToastrService) {
     }
 
   ngOnInit(): void {
@@ -50,9 +50,9 @@ export class NavComponent implements OnInit {
     this.accountService.logout();
     this.router.navigateByUrl('/');
   }
-  loadMember(){
-    this.memberService.getMember(this.user.username).subscribe(res =>{
-      this.member = res;
-    })
-  }
+  // loadMember(){
+  //   this.memberService.getMember(this.user.username).subscribe(res =>{
+  //     this.member = res;
+  //   })
+  // }
 }
