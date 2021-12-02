@@ -63,17 +63,20 @@ export class PhotoEditorComponent implements OnInit {
       maxFileSize: 10 * 1024 * 1024
     });
 
-    console.log(this.uploader);
     this.uploader.onAfterAddingFile = (file) =>{
       file.withCredentials = false;
     }
 
     this.uploader.onSuccessItem = (item, reponse, status, headers) =>{
       if(reponse) {
-        const photo = JSON.parse(reponse);
+        const photo : Photo = JSON.parse(reponse);
         this.member.photos.push(photo);
+        if(photo.isMain){
+          this.member.photoUrl = photo.url;
+          this.user.photoUrl = photo.url;
+          this.accountService.setCurrentUser(this.user);
+        }
       }
     }
   }
-
 }
