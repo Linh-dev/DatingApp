@@ -9,6 +9,7 @@ using API.DTOs;
 using API.Entities;
 using API.Interfaces;
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,12 +17,14 @@ namespace API.Controllers
 {
     public class AccountController : ApiBaseController
     {
-        private readonly DataContext _context;
         private readonly ITokenService _tokenService;
         private readonly IMapper _mapper;
-        public AccountController(DataContext context, ITokenService tokenService, IMapper mapper)
+        private readonly UserManager<AppUser> _userManager;
+        private readonly SignInManager<AppUser> _signInManager;
+        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService, IMapper mapper)
         {
-            _context = context;
+            _userManager = userManager;
+            _signInManager = signInManager;
             _tokenService = tokenService;
             _mapper = mapper;
         }
@@ -29,19 +32,23 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
         {
-            if (string.IsNullOrWhiteSpace(registerDto.Username) || registerDto.Username.IndexOf(" ") != -1) return BadRequest("Username is not empty, not consists white-space");
-            if (string.IsNullOrWhiteSpace(registerDto.Password) || registerDto.Password.IndexOf(" ") != -1) return BadRequest("Password is not empty, not consists white-space");
             if(await UserExists(registerDto.Username)) return BadRequest("Username is taken");
 
             var user = _mapper.Map<AppUser>(registerDto);
 
             user.UserName = registerDto.Username.ToLower();
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            var result = await _userManager.CreateAsync(user, registerDto.Password);
+
+            if (result.Succeeded) return BadRequest(result.Errors);
+
+            var roleResult = await _userManager.AddToRoleAsync(user, "Member");
+
+            if (!roleResult.Succeeded) return BadRequest(roleResult.Errors);
+
             return new UserDto {
                 Username = registerDto.Username,
-                Token = _tokenService.CreateToken(user),
+                Token = await _tokenService.CreateToken(user),
                 PhotoUrl = "./assets/user.png",
                 KnownAs = user.KnownAs,
                 Gender = user.Gender
@@ -50,17 +57,21 @@ namespace API.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<UserDto>> Login(LoginDto res)
         {
-            var user = await _context.Users
+            var user = await _userManager.Users
                 .Include(p => p.Photos)
                 .SingleOrDefaultAsync(w => w.UserName == res.Username.ToLower());
 
             if (user == null) return Unauthorized("Invalid username");
 
+            var result = await _signInManager.CheckPasswordSignInAsync(user, res.Password, false);
+
+            if (!result.Succeeded) return Unauthorized();
+
             var photo = user.Photos.FirstOrDefault(x => x.IsMain);
             return new UserDto
             {
                 Username = user.UserName,
-                Token = _tokenService.CreateToken(user),
+                Token = await _tokenService.CreateToken(user),
                 PhotoUrl = photo != null ? photo.Url : "./assets/user.png",
                 KnownAs = user.KnownAs,
                 Gender = user.Gender
@@ -70,7 +81,7 @@ namespace API.Controllers
 
         private async Task<bool> UserExists(string username)
         {
-            return await _context.Users.AnyAsync(x => x.UserName == username.ToLower());
+            return await _userManager.Users.AnyAsync(x => x.UserName == username.ToLower());
         }
     }
 }
