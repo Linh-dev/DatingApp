@@ -65,9 +65,6 @@ export class MembersService {
     const members = [...this.memberCache.values()]
     .reduce((arr, elem) => arr.concat(elem.result), []);
     const member = members.find((member: Member) => member.userName == username);
-    console.log(members);
-    console.log(member);
-    console.log(username);
     if(member) return of(member);
     return this.http.get<Member>(this.baseUrl + 'users/' + username);
   }
