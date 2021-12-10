@@ -38,10 +38,7 @@ namespace API
         {
             services.AddApplicationService(_configuration);
             services.AddControllers();
-            services.AddCors(option =>
-            {
-                option.AddDefaultPolicy(builder => builder.AllowAnyHeader().AllowCredentials().AllowAnyMethod().WithOrigins("https://localhost:4200"));
-            });
+            services.AddCors();
             services.AddIdentityService(_configuration);
             services.AddSignalR();
 
@@ -66,7 +63,7 @@ namespace API
             app.UseHttpsRedirection();
 
             app.UseRouting();
-            app.UseCors();
+            app.UseCors(x => x.AllowAnyHeader().AllowCredentials().AllowAnyMethod().AllowAnyMethod().WithOrigins("https://localhost:4200"));
             app.UseAuthentication();
             app.UseAuthorization();
 
